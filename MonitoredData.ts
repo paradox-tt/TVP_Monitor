@@ -6,8 +6,6 @@ import { Settings } from "./Settings";
 
 export class MonitoredData {
     private static instance: MonitoredData;
-    private chain:string;
-    private prefix:number;
     private era:number;
 
     private proxy_info:PendingNomination[];
@@ -16,8 +14,6 @@ export class MonitoredData {
     private constructor() { 
         this.proxy_info=[];
         this.nomination_info=[];
-        this.prefix=-1;
-        this.chain="";
         this.era=-1;
     }
 
@@ -29,26 +25,8 @@ export class MonitoredData {
         return MonitoredData.instance;
     }
 
-    public setPrefix(prefix:number){
-        if(prefix==2){
-            this.prefix = prefix;
-            this.chain = "kusama";
-        }else{
-            this.prefix = 0;
-            this.chain = "polkadot";
-        }
-    }
-
     public setEra(era:number){
         this.era=era;
-    }
-
-    public getPrefix(){
-        return this.prefix;
-    }
-
-    public getChain(){
-        return this.chain;
     }
 
     public getEra(){
