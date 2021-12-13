@@ -16,7 +16,7 @@ async function monitorProxyAnnoucements() {
   let monitor = MonitoredData.getInstance();
   let chain_data = ChainData.getInstance();
 
-  const prefix = monitor.getPrefix();
+  const prefix = chain_data.getPrefix();
 
   //In the unlikely event that API is undefined then exit by return;
   const api = chain_data.getApi();
