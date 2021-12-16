@@ -42,5 +42,35 @@ This system allows users to examine the nomination history of the TVP nomination
   <li>~18hrs after the proxied call is issued the bot alerts that the nominees should change in the next era</li>
   <li> At each era change, the bot monitors for any changes in nominations.  If there are differences this is represented with strikethroughs, any validator to retain nominations for a subsequent era would have their era count incremented.</li>
 </ol>
+ <hr/>
+ <b>Phase 2</b>
+ <br/>
+<p>With the launch of the application in private quarters some suggestions for improvments have been noted.  These items will be actioned as a phase 2 after a public launch of the initial build.
+<ul>
+ <li>Allow users to opt in for ping notifications (matrix address taken from an identity)</li>
+ <li>Develop independent timers for Proxy events, if a Proxy event isn't received within the expected time then produce an error for investigation</li>
+ </ul>
+</p>
  
- TO BE COMPLETED
+ 
+<hr/>
+<b>Promotion</b>
+
+<p>If you like this tool and would like to lend support to the developer kindly consider nominating my validator nodes
+
+<b>Polkadot</b>
+  <ul><li>PARANODES.IO/01 - 14hM4oLJCK6wtS7gNfwTDhthRjy5QJ1t3NAcoPjEepo9AH67</li></ul>
+
+ <b>Kusama</b> 
+ <ul>
+    <li>PARANODES.IO/01 - H3DL157HL7DkvV2kXocanmKaGXNyQphUDVW33Fnfk8KNhsv</li>
+    <li>PARANODES.IO/02 - HtYny8Eker9VBEKQrtBd6Y5PTkaHQFSvyMFy2bkd66wGBan</li>
+    <li>PARANODES.IO/03 - FkWky3r2bryP3aaAwVWykYrKesAwkDyKZWsDyBvck7YawSi</li>
+    <li>PARANODES.IO/04 - EsNZHmG4bQMGzQNK4Z2CR7Hdhu4or7p2vsLRChUEJcjJAeU</li>
+    <li>PARANODES.IO/05 - EriYFJuqCeBF6SFkKxyQWwaTvT9tcoF9ZGDQ4LX3a1iBsYr</li>
+ </ul>
+</p>
+ 
+<p>
+<b>Primary Identity</b>
+<ul><li>Paradox - HqRcfhH8VXMhuCk5JXe28WMgDDuW9MVDVNofe1nnTcefVZn</li></ul></p>
