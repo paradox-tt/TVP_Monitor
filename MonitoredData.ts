@@ -55,15 +55,11 @@ export class MonitoredData {
         this.proxy_info.push(proxy_entry);
     }
 
-    public hasProxyCall(block_number:number):PendingNomination{
-        var result = this.proxy_info.find(entry=>(entry.proxy_info.number+Settings.proxy_delay_blocks+1)==block_number);       
+    public hasProxyCall(block_number:number):PendingNomination|undefined{
+        var result = this.proxy_info.find(entry=>(entry.proxy_info.number+Settings.proxy_delay_blocks+100)==block_number);       
         //var result = this.proxy_info[0];
         
-        if(result==undefined){
-            return <PendingNomination>{};
-        }else{
-            return result;
-        }
+        return result;
     }
 
     public getNominations(controller:string):Nomination{

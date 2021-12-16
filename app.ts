@@ -101,7 +101,7 @@ async function monitorEraChange() {
     });
 
   });
-
+   
   //Start monitoring new session events
   
   Messaging.sendMessage('Waiting for new session event..');
@@ -176,12 +176,12 @@ async function monitorProxyChanges() {
     var block_number: number = parseInt(header.number.unwrap().toString());
     var proxy_data = monitor.hasProxyCall(block_number);
 
-    if (proxy_data.nominator != undefined) {
+    if (proxy_data!=undefined) {
 
-      var tvp_nominator = Settings.tvp_nominators.find(nominator => nominator.controller == proxy_data.nominator);
+      var tvp_nominator = Settings.tvp_nominators.find(nominator => nominator.controller == proxy_data!.nominator);
       var stash = tvp_nominator != undefined ? tvp_nominator.stash : "unknown";
 
-      Messaging.sendMessage(`Proxy call for ${stash}  was executed, changes should be seen in the next era.`);
+      Messaging.sendMessage(`Proxy call for ${stash} was executed, changes should be seen in the next era.`);
       /*
 
       The code below was used to compare the proxy call to present nomination data it was considered not relevant as the next era this information is shown.
