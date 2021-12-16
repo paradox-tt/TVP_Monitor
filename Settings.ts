@@ -21,4 +21,6 @@ export class Settings {
     static proxy_url="";
 
     static candidate_url="";
+
+    static nomination_url="";
 }

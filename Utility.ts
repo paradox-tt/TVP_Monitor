@@ -1,5 +1,5 @@
 import { Messaging } from "./Messaging";
-import { TVP_Candidate, ProxyAssignments, Nomination, Nominee } from "./Types";
+import { TVP_Candidate, ProxyAssignments, Nomination, Nominee, PreviousNominations } from "./Types";
 import { MonitoredData } from "./MonitoredData";
 import { Settings } from "./Settings";
 import { ChainData } from './ChainData';
@@ -19,7 +19,7 @@ export class Utility {
         var fetch_result = await fetch(fetch_url);
 
         while (fetch_result.status != 200) {
-            Messaging.sendMessage("I am having troubles finding candidate data, retrying in a minute");
+            Messaging.sendMessage(`I am having trouble finding pending nominations, retrying in ${Settings.retry_time / 60000} minute(s)`);
             await new Promise(f => setTimeout(f, Settings.retry_time));
             fetch_result = await fetch(fetch_url);
         }
@@ -27,6 +27,26 @@ export class Utility {
         var candidates: TVP_Candidate[] = await fetch_result.json();
 
         return candidates;
+    }
+
+    static async getPreviousNominations(): Promise<PreviousNominations[]> {
+        let chain_data = ChainData.getInstance();
+        const network = chain_data.getChain();
+
+        var fetch_url = `https://${network}${Settings.nomination_url}`
+
+        var fetch_result = await fetch(fetch_url);
+
+        while (fetch_result.status != 200) {
+            Messaging.sendMessage(`I am having trouble finding previous nominations, retrying in ${Settings.retry_time / 60000} minute(s)`);
+            await new Promise(f => setTimeout(f, Settings.retry_time));
+            fetch_result = await fetch(fetch_url);
+        }
+
+        var previous_nominations: PreviousNominations[] = await fetch_result.json();
+        previous_nominations= previous_nominations.sort((x,y)=>x.era-y.era);//sort by era descending
+
+        return previous_nominations;
     }
 
     static async getProxyNominees(controller: string): Promise<ProxyAssignments> {
@@ -38,7 +58,7 @@ export class Utility {
         var fetch_result = await fetch(proxy_url);
 
         while (fetch_result.status != 200) {
-            Messaging.sendMessage("I am having troubles finding pending nominations, retrying in 1 minute");
+            Messaging.sendMessage(`I am having trouble finding pending nominations, retrying in ${Settings.retry_time / 60000} minute(s)`);
             await new Promise(f => setTimeout(f, Settings.retry_time));
             fetch_result = await fetch(proxy_url);
         }
@@ -47,7 +67,7 @@ export class Utility {
         //console.log(results.length);
         let result: ProxyAssignments = <ProxyAssignments>{};
 
-        await assignments.forEach(proxy_assignment => {
+        assignments.forEach(proxy_assignment => {
             if (proxy_assignment.controller == controller) {
 
                 if (Object.keys(result).length === 0) {
@@ -76,6 +96,7 @@ export class Utility {
 
         const nominations = await api.query.staking.nominators.entries();
 
+        //Initializes a null response
         var result: Nomination = <Nomination>{ era: monitor.getEra(), nominator: val_address, nominees: [] };
 
 
@@ -208,6 +229,9 @@ export class Utility {
                 break;
             case "candidate_url":
                 Settings.candidate_url = value;
+                break;
+            case "nomination_url":
+                Settings.nomination_url = value;
                 break;
         }
     }

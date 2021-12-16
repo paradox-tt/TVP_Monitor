@@ -20,7 +20,7 @@ export class NominationMessage {
 
         output.push(`<p>1KV nominator (${this.nomination.nominator}) nominated the following ${this.nomination.nominees.length} validators in era <b>${this.nomination.era}</b>`);
         if (chain_data.getPrefix() == 0) {
-            output.push(`<br/><i>Note: The nomination account will leave in session 5 of era ${this.nomination.era} and the validators might be elected in ${this.nomination.era + 1}</i>`);
+            output.push(`<br/><i>Note: The nomination account will leave in session 5 of era ${this.nomination.era} and the validators might be elected in era <b>${this.nomination.era + 1}</b></i>`);
         }
         output.push(':</p>');
         await Utility.getCandidates().then(candidates => {
@@ -52,7 +52,7 @@ export class NominationMessage {
 
         output.push(`<p>1KV nominator (${this.nomination.nominator}) nominated the following ${this.nomination.nominees.length} validators in era <b>${this.nomination.era}</b><br/>`);
         if (chain_data.getPrefix() == 0) {
-            output.push(`<i>Note: The nomination account will leave in session 5 of era ${this.nomination.era} and the validators might be elected in ${this.nomination.era + 1}</i><br/>`);
+            output.push(`<i>Note: The nomination account will leave in session 5 of era ${this.nomination.era} and the validators might be elected in era <b>${this.nomination.era + 1}</b></i><br/>`);
         }
         output.push(`${percentage_change}% of the nominations changed.</p>`);
 

@@ -33,7 +33,7 @@ export class MonitoredData {
         return this.era;
     }
 
-    public addProxyCall(proxy_entry:PendingNomination) {
+    public async addProxyCall(proxy_entry:PendingNomination) {
         
         var proxy_message:ProxyMessage = new ProxyMessage(proxy_entry);
         var previous_entry = this.proxy_info.find(nom=>nom.nominator==proxy_entry.nominator);
@@ -41,11 +41,11 @@ export class MonitoredData {
         //console.log(proxy_entry);
 
         if(previous_entry==undefined){
-            proxy_message.generateNewString().then(msg=>{
+            await proxy_message.generateNewString().then(msg=>{
                 Messaging.sendMessage(msg);
             });
         }else{
-            proxy_message.generateDuplicateString(previous_entry.proxy_info.targets).then(msg=>{
+            await proxy_message.generateDuplicateString(previous_entry.proxy_info.targets).then(msg=>{
                 Messaging.sendMessage(msg);
             });
 

@@ -89,4 +89,14 @@ export interface ProxyAssignments {
     __v: number;
   }
   
+  export interface PreviousNominations {
+    _id: string;
+    validators?: (string | null)[] | null;
+    address: string;
+    era: number;
+    timestamp: number;
+    bonded: number;
+    blockHash: string;
+    __v: number;
+  }
   

@@ -5,12 +5,12 @@ import { MonitoredData } from './MonitoredData';
 import { encodeAddress } from '@polkadot/util-crypto';
 import { Utility } from "./Utility";
 import { ChainData } from './ChainData';
+import { Nomination } from './Types';
 
 
 /*
   Monitors for a proxy(announce) event, if it occurs then display a message
 */
-
 async function monitorProxyAnnoucements() {
 
   let monitor = MonitoredData.getInstance();
@@ -45,13 +45,13 @@ async function monitorProxyAnnoucements() {
       // If the event is a proxy(annouce)
       if (api.events.proxy.Announced.is(event)) {
         //Get the public key from data[0] and then convert to the chain address
-        let nominator_account = encodeAddress(event.data[0], prefix);
+        const nominator_account = encodeAddress(event.data[0], prefix);
 
         //If the nominator_account is one of the 1KV nominator accounts then
         if (Settings.tvp_nominators
           .find(nominator => nominator.controller == nominator_account)) {
-        
-        //Retrieve the nominees from the an external source
+
+          //Retrieve the nominees from the an external source
           Utility.getProxyNominees(nominator_account).then(proxy_data => {
             //Adds the proxy call to the monitor singleton which also initates the message
             monitor.addProxyCall({
@@ -91,15 +91,19 @@ async function monitorEraChange() {
     //Add to the nominations which will also send a message
     Settings.tvp_nominators.forEach(nominator => {
       Utility.getValidatorNominations(nominator.stash).then(nomination_data => {
-        monitor.addNomination(nomination_data);
+        
+        //Updates the previous nomination count for each nominee
+        updateNominationData(nomination_data).then(u_nomination_data=>{
+          monitor.addNomination(u_nomination_data);
+        });
+        
       });
     });
 
   });
 
-  /*
-    Start monitoring new session events
-  */
+  //Start monitoring new session events
+  
   Messaging.sendMessage('Waiting for new session event..');
 
   api.query.system.events((events) => {
@@ -133,6 +137,24 @@ async function monitorEraChange() {
   });
 }
 
+/* 
+  This will be used to populate correct 'previous' nomination counts for nominees on first load
+  of the bot, for now do nothing.
+
+  TODO: Read chain data to populate previous nominations
+*/
+async function updateNominationData(nominationData:Nomination):Promise<Nomination> {
+    /*var previous_nominations = await Utility.getPreviousNominations();
+    previous_nominations = previous_nominations.filter(item=>item.address==nominationData.nominator);
+
+    var result:Nomination = {
+      nominator:nominationData.nominator,
+      era:nominationData.era,
+      nominees:[]
+    }*/ 
+    return nominationData;
+}
+
 /*
     The following method monitors block numbers, if the block number is at the anticipated block number
     of a proxy call, then send a message to expect a change in the next era.
@@ -140,8 +162,6 @@ async function monitorEraChange() {
     In the future this would be expanded to anticipate proxy(announce) calls, if it isn't retrieved in
     24+lag hours then send a message that something might be wrong.
 */
-
-
 async function monitorProxyChanges() {
   let monitor = MonitoredData.getInstance();
   let chain_data = ChainData.getInstance();
