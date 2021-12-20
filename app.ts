@@ -245,6 +245,7 @@ async function monitorProxyChanges() {
 
 async function main() {
 
+
   await Utility.loadVariables();
   console.log(Settings);
   const api = await ApiPromise.create({ provider: new WsProvider(Settings.provider) });

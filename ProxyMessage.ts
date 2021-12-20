@@ -44,10 +44,7 @@ export class ProxyMessage {
 
             });
 
-
-
             output.push("</ul>");
-
 
         });
 
@@ -61,6 +58,7 @@ export class ProxyMessage {
 
         let chain_data = ChainData.getInstance();
         var era = await chain_data.getCurrentEra();
+        var candidates_listed:string[] = [];
 
         chain_data.getPrefix() == 2 ? era++ : era += 2;
 
@@ -92,7 +90,18 @@ export class ProxyMessage {
                     output.push(`<li>${prev_candidate_name}</li>`);
                 }
 
+                candidates_listed.push(previous_nominee);
 
+            });
+
+            //Before we close, list any current candidates that wasn't listed, this is useful when the system elected
+            //fewer candidates by error
+
+            this.nominees.forEach(nominee=>{
+                if(candidates_listed.indexOf(nominee)<0){
+                    var missing_candidate_name = Utility.getName(candidates, nominee);
+                    output.push(`<li>${missing_candidate_name}</li>`);
+                }
             });
 
             output.push("</ul>");

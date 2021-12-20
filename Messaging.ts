@@ -19,6 +19,8 @@ export class Messaging{
         client.start().then((x:MatrixClient)=>{
             console.log("Matrix client initiated");
             client.sendHtmlText(Settings.room_id,message);
+        }).catch(err=>{
+            console.log(`Error - ${err}`);
         });
     
     }
