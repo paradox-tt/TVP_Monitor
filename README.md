@@ -1,4 +1,4 @@
-# Thousand Validator - Nomination Monitoring Tool
+# Thousand Validator - Nomination Monitoring & Audit Tool
 A bot that monitors nominations of the accounts held by the 1KV programme.
 
 <b>Rationale</b>
