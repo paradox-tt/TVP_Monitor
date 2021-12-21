@@ -83,14 +83,16 @@ export class ProxyMessage {
                             var new_candidate_name = Utility.getName(candidates, new_candidate);
 
                             output.push(`<li><del>${prev_candidate_name}</del> <b>-></b> <ins>${new_candidate_name}</ins></li>`);
+                            candidates_listed.push(new_candidate);
                         }
                     }
 
                 } else {
                     output.push(`<li>${prev_candidate_name}</li>`);
+                    candidates_listed.push(previous_nominee);
                 }
 
-                candidates_listed.push(previous_nominee);
+                
 
             });
 

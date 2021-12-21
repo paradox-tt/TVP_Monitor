@@ -53,11 +53,14 @@ async function monitorProxyAnnoucements() {
 
           //Retrieve the nominees from the an external source
           Utility.getProxyNominees(nominator_account).then(proxy_data => {
+
             //Adds the proxy call to the monitor singleton which also initates the message
+            
             monitor.addProxyCall({
               nominator: nominator_account,
               proxy_info: proxy_data
             });
+
           });
         }
       }
@@ -91,19 +94,19 @@ async function monitorEraChange() {
     //Add to the nominations which will also send a message
     Settings.tvp_nominators.forEach(nominator => {
       Utility.getValidatorNominations(nominator.stash).then(nomination_data => {
-        
+
         //Updates the previous nomination count for each nominee
-        updateNominationData(nomination_data).then(u_nomination_data=>{
+        updateNominationData(nomination_data).then(u_nomination_data => {
           monitor.addNomination(u_nomination_data);
         });
-        
+
       });
     });
 
   });
-   
+
   //Start monitoring new session events
-  
+
   Messaging.sendMessage('Waiting for new session event..');
 
   api.query.system.events((events) => {
@@ -143,16 +146,16 @@ async function monitorEraChange() {
 
   TODO: Read chain data to populate previous nominations
 */
-async function updateNominationData(nominationData:Nomination):Promise<Nomination> {
-    /*var previous_nominations = await Utility.getPreviousNominations();
-    previous_nominations = previous_nominations.filter(item=>item.address==nominationData.nominator);
+async function updateNominationData(nominationData: Nomination): Promise<Nomination> {
+  /*var previous_nominations = await Utility.getPreviousNominations();
+  previous_nominations = previous_nominations.filter(item=>item.address==nominationData.nominator);
 
-    var result:Nomination = {
-      nominator:nominationData.nominator,
-      era:nominationData.era,
-      nominees:[]
-    }*/ 
-    return nominationData;
+  var result:Nomination = {
+    nominator:nominationData.nominator,
+    era:nominationData.era,
+    nominees:[]
+  }*/
+  return nominationData;
 }
 
 /*
@@ -176,7 +179,7 @@ async function monitorProxyChanges() {
     var block_number: number = parseInt(header.number.unwrap().toString());
     var proxy_data = monitor.hasProxyCall(block_number);
 
-    if (proxy_data!=undefined) {
+    if (proxy_data != undefined) {
 
       var tvp_nominator = Settings.tvp_nominators.find(nominator => nominator.controller == proxy_data!.nominator);
       var stash = tvp_nominator != undefined ? tvp_nominator.stash : "unknown";
