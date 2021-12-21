@@ -53,7 +53,7 @@ This system allows users to examine the nomination history of the TVP nomination
 </p>
 <hr/>
 
-<b>Images<b>
+<b>Images</b>
 <br/> 
 <figure> 
 <img src='https://github.com/paradox-tt/TVP_Monitor/blob/main/images/ProxyNominationChange.jpg'>
