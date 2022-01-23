@@ -1,4 +1,4 @@
-# Thousand Validator - Nomination Monitoring Tool
+# Thousand Validator - Nomination Monitoring & Audit Tool
 A bot that monitors nominations of the accounts held by the 1KV programme.
 
 <b>Rationale</b>
@@ -53,12 +53,13 @@ This system allows users to examine the nomination history of the TVP nomination
 </p>
 <hr/>
 
-<b>Images<b>
+<b>Images</b>
 <br/> 
 <figure> 
 <img src='https://github.com/paradox-tt/TVP_Monitor/blob/main/images/ProxyNominationChange.jpg'>
-<figcaption align="center">Img 1: Shows a change in nomination at the proxy level, this SHOULD be applied in the future and gives the validator some forewarning</figcaption>
+<figcaption align="center">Img 1: Shows a change in nomination at the proxy level, this SHOULD be applied in the future and gives the validator some forewarning. Also note that two valdiators were re-nominated by the proxy account, these were not striked-out.</figcaption>
  </figure>
+ 
 <br/> <br/> 
 <figure> 
 <img src='https://github.com/paradox-tt/TVP_Monitor/blob/main/images/ChangeInNominations.jpg'>
