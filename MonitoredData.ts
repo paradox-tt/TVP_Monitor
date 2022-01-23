@@ -3,6 +3,7 @@ import { ProxyMessage } from "./ProxyMessage";
 import { Nomination, PendingNomination, Nominee } from "./Types";
 import { NominationMessage } from "./NominationMessage";
 import { Settings } from "./Settings";
+import { Utility } from "./Utility";
 
 export class MonitoredData {
     private static instance: MonitoredData;
@@ -41,11 +42,11 @@ export class MonitoredData {
         //console.log(proxy_entry);
 
         if(previous_entry==undefined){
-            await proxy_message.generateNewString().then(msg=>{
+            proxy_message.generateNewString().then(msg=>{
                 Messaging.sendMessage(msg);
             });
         }else{
-            await proxy_message.generateDuplicateString(previous_entry.proxy_info.targets).then(msg=>{
+            proxy_message.generateDuplicateString(previous_entry.proxy_info.targets).then(msg=>{
                 Messaging.sendMessage(msg);
             });
 
@@ -117,14 +118,14 @@ export class MonitoredData {
                     //Looks for similiarities and adds one to the count if this is the case
                     this.nomination_info[previous_nominee_index].nominees.forEach(previous_nominee=>{
                         if(previous_nominee.val_address==nominee.val_address){
-                            similar.push(<Nominee>{ val_address:previous_nominee.val_address, nomination_count:previous_nominee.nomination_count+1});
+                            similar.push(<Nominee>{ val_address:previous_nominee.val_address, nomination_count:previous_nominee.nomination_count+1,score:Utility.getScore(Utility.tvp_candidates,previous_nominee.val_address)});
                             found=true;
                         }
                     });
 
                     //If there are no similarities
                     if(!found){
-                        differences.push(<Nominee>{ val_address:nominee.val_address, nomination_count:1});
+                        differences.push(<Nominee>{ val_address:nominee.val_address, nomination_count:1, score:Utility.getScore(Utility.tvp_candidates,nominee.val_address)});
                     }
 
                 });

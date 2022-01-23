@@ -5,7 +5,7 @@ import { MonitoredData } from './MonitoredData';
 import { encodeAddress } from '@polkadot/util-crypto';
 import { Utility } from "./Utility";
 import { ChainData } from './ChainData';
-import { Nomination } from './Types';
+import { Nomination, PendingNomination } from './Types';
 
 
 /*
@@ -24,16 +24,7 @@ async function monitorProxyAnnoucements() {
     return;
   }
 
-  Messaging.sendMessage('Loading possible proxy assignments..');
-  //Preloads possible candidates
-  Settings.tvp_nominators.forEach(nominator_account => {
-    Utility.getProxyNominees(nominator_account.controller).then(proxy_data => {
-      monitor.addProxyCall({
-        nominator: nominator_account.controller,
-        proxy_info: proxy_data
-      });
-    });
-  });
+  executeProxyChanges();
 
   Messaging.sendMessage('Waiting for proxy event..');
 
@@ -48,25 +39,38 @@ async function monitorProxyAnnoucements() {
         const nominator_account = encodeAddress(event.data[0], prefix);
 
         //If the nominator_account is one of the 1KV nominator accounts then
-        if (Settings.tvp_nominators
-          .find(nominator => nominator.controller == nominator_account)) {
-
-          //Retrieve the nominees from the an external source
-          Utility.getProxyNominees(nominator_account).then(proxy_data => {
-
-            //Adds the proxy call to the monitor singleton which also initates the message
-            
-            monitor.addProxyCall({
-              nominator: nominator_account,
-              proxy_info: proxy_data
-            });
-
-          });
+        if (Settings.tvp_nominators.find(nominator => nominator.controller == nominator_account)) {
+          executeProxyChanges();
         }
       }
+
     });
   });
 
+}
+
+async function executeProxyChanges() {
+  let monitor = MonitoredData.getInstance();
+  let chain_data = ChainData.getInstance();
+  Utility.tvp_candidates = await Utility.getCandidates();
+
+
+  //In the unlikely event that API is undefined then exit by return;
+  const api = chain_data.getApi();
+  if (api == undefined) {
+    return;
+  }
+
+  Messaging.sendMessage('Loading possible proxy assignments..');
+  //Preloads possible candidates
+  Settings.tvp_nominators.forEach(nominator_account => {
+    Utility.getProxyNominees(nominator_account.controller).then(proxy_data => {
+      monitor.addProxyCall({
+        nominator: nominator_account.controller,
+        proxy_info: proxy_data
+      });
+    });
+  });
 }
 
 /*
@@ -77,9 +81,7 @@ async function monitorProxyAnnoucements() {
 async function monitorEraChange() {
 
   Messaging.sendMessage('Loading current nominations..');
-
   let chain_data = ChainData.getInstance();
-  let monitor = MonitoredData.getInstance();
 
   //In the unlikely event that API is undefined then return;
   const api = chain_data.getApi();
@@ -87,24 +89,7 @@ async function monitorEraChange() {
     return;
   }
 
-  //Preload nominations on startup
-  chain_data.getCurrentEra().then(era => {
-
-    monitor.setEra(era);
-    //Add to the nominations which will also send a message
-    Settings.tvp_nominators.forEach(nominator => {
-      Utility.getValidatorNominations(nominator.stash).then(nomination_data => {
-
-        //Updates the previous nomination count for each nominee
-        updateNominationData(nomination_data).then(u_nomination_data => {
-          monitor.addNomination(u_nomination_data);
-        });
-
-      });
-    });
-
-  });
-
+  executeEraChange();
   //Start monitoring new session events
 
   Messaging.sendMessage('Waiting for new session event..');
@@ -121,23 +106,102 @@ async function monitorEraChange() {
         const current_session = (parseInt(event.data[0].toString()) % 6) + 1;
 
         if (current_session == 1) {
-
-          //Retrieve the current era
-          chain_data.getCurrentEra().then(era => {
-            monitor.setEra(era);
-
-            //Add the nominations to the monitor, which also sends a message to the channel 
-            Settings.tvp_nominators.forEach(nominator => {
-              Utility.getValidatorNominations(nominator.stash).then(nomination_data => {
-                monitor.addNomination(nomination_data);
-              });
-            });
-
-          });
+          executeEraChange();
         }
+
       }
+
     });
   });
+}
+
+async function executeEraChange() {
+  Utility.tvp_candidates = await Utility.getCandidates();
+  const nominators = await Utility.getNominators();
+  const nominator_map = await Utility.getNominatorMap();
+
+  let chain_data = ChainData.getInstance();
+  let monitor = MonitoredData.getInstance();
+
+  //Preload nominations on startup
+  monitor.setEra(await chain_data.getCurrentEra());
+  //Add to the nominations which will also send a message
+  await Messaging.sendMessage(`___`);
+  await Messaging.sendMessage(`Loading nomination data for era <b>${await chain_data.getCurrentEra()}<b>...`);
+  for (var nom_index = 0; nom_index < nominators.length; nom_index++) {
+    const nomination_data = await Utility.getValidatorNominations(nominators[nom_index].stash, nominator_map);
+
+    //Wait 2ms to prevent flooding
+    await new Promise(f => setTimeout(f, 2000));
+    //Updates the previous nomination count for each nominee
+    updateNominationData(nomination_data).then(u_nomination_data => {
+      monitor.addNomination(u_nomination_data);
+    });
+
+  }
+
+  produceNominationSummary(nominator_map);
+
+}
+
+async function produceNominationSummary(nomination_map: [string, string[]][]) {
+  var output: string[] = [];
+  var total_nominations:number=0;
+  var validator_map: { val: string, nom: string[] }[] = [];
+  let chain_data = ChainData.getInstance();
+
+  var current_era = await chain_data.getCurrentEra();
+
+  var voters = Utility.tvp_candidates.filter(cand => cand.democracyVoteCount > 0);
+
+  //Inverts the nominator map, allowing validators to be exposed
+  for (let [nominator, validators] of nomination_map) {
+    total_nominations += validators.length;
+
+    validators.forEach(validator => {
+      var found_val_index = validator_map.findIndex(x => x.val == validator);
+      if (found_val_index > -1) {
+        validator_map[found_val_index].nom.push(nominator);
+      } else {
+        validator_map.push({ val: validator, nom: [nominator] })
+      }
+    });
+  }
+
+  //Get a list of all voters that are nominated
+  var nominated_voters = voters.filter(voter => validator_map.map(x => x.val).indexOf(voter.stash) > -1);
+  var nominated_voters_percent = ((nominated_voters.length * 100.0) / voters.length).toFixed(2);
+
+  var val_scores = validator_map.map(x => x.val).sort((a, b) => Utility.getScore(Utility.tvp_candidates, a) - Utility.getScore(Utility.tvp_candidates, b));
+
+  output.push(`<p> In era ${current_era} there were ${nomination_map.length} nominators that nominated ${validator_map.length} unique validators. `);
+  output.push(`Out of the ${voters.length} validators who participated in democracy voting, ${nominated_voters_percent}% (${nominated_voters.length}) are presently nominated.  `);
+  output.push(`Validators scores ranged from ${Utility.getScore(Utility.tvp_candidates, val_scores[0]).toFixed(2)} to ${Utility.getScore(Utility.tvp_candidates, val_scores[val_scores.length - 1]).toFixed(2)}.</p>`);
+  //console.log(validator_map);
+  validator_map = validator_map.filter(val => val.nom.length > 1);
+  //console.log(`XXXX`);
+
+  //Displays validators with duplicated nominations
+  if (validator_map.length > 0) {
+    output.push(`There are also ${validator_map.length} validator(s) who are nominated by two or more nominators.  `);
+    output.push(`<details>`);
+    output.push(`<summary>Click here for details</summary>`)
+    validator_map.forEach(val => {
+      output.push(`${Utility.getName(Utility.tvp_candidates, val.val)}`);
+      output.push(`<ul>`);
+      val.nom.forEach(nom => {
+        output.push(`<li>${nom}</li>`);
+      });
+      output.push(`</ul>`);
+    });
+    output.push(`</details>`);
+  }
+
+  //Issues a delay for the summary so that it displays last.
+  setTimeout(() => {
+    Messaging.sendMessage(output.join(""));
+  }, 4000);
+
 }
 
 /* 
@@ -184,45 +248,41 @@ async function monitorProxyChanges() {
       var tvp_nominator = Settings.tvp_nominators.find(nominator => nominator.controller == proxy_data!.nominator);
       var stash = tvp_nominator != undefined ? tvp_nominator.stash : "unknown";
 
-      Messaging.sendMessage(`Proxy call for ${stash} was executed, changes should be seen in the next era.`);
-      /*
-
-      The code below was used to compare the proxy call to present nomination data it was considered not relevant as the next era this information is shown.
-      It would be left for future development
-
-      if(proxy_data.proxy_info!=undefined)
-        //Messaging.sendMessage(`Proxy call for ${proxy_data.nominator} should be executed at ${proxy_data.proxy_info.number}`);
-
-        var nomination_data:Nomination;
-        nomination_data= monitor.getNominations(proxy_data.nominator);
-        
-        if(nomination_data){
-
-           if(nomination_data.nominees){
-          
-            var nominees = nomination_data.nominees.map(nominee=>nominee.val_address);
-            
-            var proxy_nominations:string[] = proxy_data.proxy_info.targets;
-
-              if(proxy_nominations!=undefined){
-                var difference = nominees.filter(nominee=>proxy_nominations?.indexOf(nominee)<0);
-                
-                if(difference!=undefined){
-                  var percentage_change = (((difference.length*1.0)/(proxy_nominations.length*1.0))*100.00);
-                  percentage_change = 100.00 - percentage_change;
-                  
+      verifyProxyCall(proxy_data, stash);
 
 
-                  //Messaging.sendMessage(`Proxy call for ${proxy_data.nominator} should be executed.</br> The change is a ${percentage_change.toFixed(2)}% match.`);   
-                                 
-                }
 
-              }
-           }
-        }*/
     }
   });
 
+}
+
+async function verifyProxyCall(proxy_nomination: PendingNomination, stash: string) {
+
+  var nominator_map = await Utility.getNominatorMap();
+  var validators: string[] = [];
+  //Extracts the nominations for the given nominator
+  for (let [nom, val] of nominator_map) {
+    if (nom == stash) {
+      val.forEach(validator => {
+        validators.push(validator);
+      });
+    }
+  }
+
+  //Finds all matches between what's on chain and what was sent via proxy
+  var matching_validators = proxy_nomination.proxy_info.targets.filter(target => validators.indexOf(target) > -1); 
+
+  if (matching_validators.length == proxy_nomination.proxy_info.targets.length){
+    Messaging.sendMessage(`Proxy call for ${stash} was successfully executed.  Nomination changes were verified on chain and should be seen next era.`);
+  }else{
+    var percentage_change = ((matching_validators.length*100.00)/proxy_nomination.proxy_info.targets.length).toFixed(2);
+    Messaging.sendMessage(`Proxy call for ${stash} was expected, however, ${percentage_change}% of the desired nominations were seen on-chain`);
+  }
+  console.log(`Targets`);
+  console.log(proxy_nomination.proxy_info.targets.sort());
+  console.log(`Validators`);
+  console.log(validators.sort());
 }
 
 /*
@@ -253,11 +313,12 @@ async function main() {
   console.log(Settings);
   const api = await ApiPromise.create({ provider: new WsProvider(Settings.provider) });
 
-  await Utility.initalizeChainData(api).then(x => {
-    monitorProxyAnnoucements();
-    monitorEraChange();
-    monitorProxyChanges();
-  });
+  await Utility.initalizeChainData(api);
+  await Messaging.initialize();
+
+  monitorProxyAnnoucements();
+  monitorEraChange();
+  monitorProxyChanges();
 
 }
 

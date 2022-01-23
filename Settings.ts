@@ -23,4 +23,6 @@ export class Settings {
     static candidate_url="";
 
     static nomination_url="";
+
+    static nominator_url=".w3f.community/nominators";
 }

@@ -1,5 +1,5 @@
 import { Messaging } from "./Messaging";
-import { TVP_Candidate, ProxyAssignments, Nomination, Nominee, PreviousNominations } from "./Types";
+import { TVP_Candidate, ProxyAssignments, Nomination, Nominee, PreviousNominations, Nominators } from "./Types";
 import { MonitoredData } from "./MonitoredData";
 import { Settings } from "./Settings";
 import { ChainData } from './ChainData';
@@ -10,16 +10,20 @@ import * as rd from 'readline'
 
 export class Utility {
 
+    static tvp_candidates: TVP_Candidate[];
+
+
     static async getCandidates(): Promise<TVP_Candidate[]> {
         let chain_data = ChainData.getInstance();
         const network = chain_data.getChain();
+
 
         var fetch_url = `https://${network}${Settings.candidate_url}`
 
         var fetch_result = await fetch(fetch_url);
 
         while (fetch_result.status != 200) {
-            Messaging.sendMessage(`I am having trouble finding pending nominations, retrying in ${Settings.retry_time / 60000} minute(s)`);
+            Messaging.sendMessage(`I am having trouble finding candidate information, retrying in ${Settings.retry_time / 60000} minute(s)`);
             await new Promise(f => setTimeout(f, Settings.retry_time));
             fetch_result = await fetch(fetch_url);
         }
@@ -27,7 +31,28 @@ export class Utility {
         var candidates: TVP_Candidate[] = await fetch_result.json();
 
         return candidates;
+
     }
+
+    static async getNominators(): Promise<Nominators[]> {
+        let chain_data = ChainData.getInstance();
+        const network = chain_data.getChain();
+
+        var fetch_url = `https://${network}${Settings.nominator_url}`
+
+        var fetch_result = await fetch(fetch_url);
+
+        while (fetch_result.status != 200) {
+            Messaging.sendMessage(`I am having trouble finding the list of nominators, retrying in ${Settings.retry_time / 60000} minute(s)`);
+            await new Promise(f => setTimeout(f, Settings.retry_time));
+            fetch_result = await fetch(fetch_url);
+        }
+
+        var nominators: Nominators[] = await fetch_result.json();
+
+        return nominators;
+    }
+
 
     static async getPreviousNominations(): Promise<PreviousNominations[]> {
         let chain_data = ChainData.getInstance();
@@ -44,7 +69,7 @@ export class Utility {
         }
 
         var previous_nominations: PreviousNominations[] = await fetch_result.json();
-        previous_nominations= previous_nominations.sort((x,y)=>x.era-y.era);//sort by era descending
+        previous_nominations = previous_nominations.sort((x, y) => x.era - y.era);//sort by era descending
 
         return previous_nominations;
     }
@@ -58,7 +83,7 @@ export class Utility {
         var fetch_result = await fetch(proxy_url);
 
         while (fetch_result.status != 200) {
-            Messaging.sendMessage(`I am having trouble finding pending nominations, retrying in ${Settings.retry_time / 60000} minute(s)`);
+            Messaging.sendMessage(`I am having trouble finding proxy nominations, retrying in ${Settings.retry_time / 60000} minute(s)`);
             await new Promise(f => setTimeout(f, Settings.retry_time));
             fetch_result = await fetch(proxy_url);
         }
@@ -83,42 +108,76 @@ export class Utility {
         return result;
     }
 
+    static async getNominatorMap(): Promise<[string, string[]][]> {
 
-    static async getValidatorNominations(val_address: string): Promise<Nomination> {
-
-        let monitor = MonitoredData.getInstance();
         let chain_data = ChainData.getInstance();
 
         const api = chain_data.getApi();
         if (api == undefined) {
-            return <Nomination>{};
+            return [];
         }
 
         const nominations = await api.query.staking.nominators.entries();
+        const tvp_nominators: string[] = (await Utility.getNominators()).map(nominator => nominator.stash);
+
+        var results: [string, string[]][] = [];
+
+        for (let [nom_address, validators] of nominations) {
+            if (tvp_nominators.indexOf(nom_address!.toHuman()!.toString()) > -1) {
+                var validator_array: string[] = [];
+
+                for (var i = 0; i < validators.unwrapOrDefault().targets.length; i++) {
+                    validator_array.push(validators.unwrapOrDefault().targets[i].toHuman());
+                }
+
+                results.push([nom_address!.toHuman()!.toString(), validator_array]);
+            }
+        }
+
+        return results;
+    }
+
+    static async getValidatorNominations(tvp_nominator: string, nominator_map: [string, string[]][]): Promise<Nomination> {
+
+        let monitor = MonitoredData.getInstance();
+        let chain_data = ChainData.getInstance();
 
         //Initializes a null response
-        var result: Nomination = <Nomination>{ era: monitor.getEra(), nominator: val_address, nominees: [] };
+        var result: Nomination = <Nomination>{ era: monitor.getEra(), nominator: tvp_nominator, nominees: [] };
 
 
         var add_tvp_array = false;
 
-        for (let [nom_address, validators] of nominations) {
+        for (let [nom_address, validators] of nominator_map) {
 
-            if (val_address.indexOf(nom_address!.toHuman()!.toString()) > -1) {
+            if (tvp_nominator.indexOf(nom_address) > -1) {
                 add_tvp_array = true;
             }
 
-            for (var i = 0; i < validators.unwrapOrDefault().targets.length; i++) {
-                const validator = validators.unwrapOrDefault().targets[i].toHuman();
+            for (var i = 0; i < validators.length; i++) {
+                const validator = validators[i];
 
                 if (add_tvp_array) {
-                    result.nominees.push(<Nominee>{ val_address: validator, nomination_count: 1 });
+                    var candidate = Utility.tvp_candidates.find(candidate => candidate.stash == validator)
+                    var val_score = 0;
+
+                    if (candidate?.score == undefined) {
+                        val_score=0;
+                    } else {
+                        val_score= candidate!.score!.aggregate;
+                    }
+
+
+                    result.nominees.push(<Nominee>{ val_address: validator, nomination_count: 1, score: val_score });
                 }
 
             }
 
             add_tvp_array = false;
         }
+
+        //Sort nominees by score descending
+        result.nominees = result.nominees.sort((a, b) => b.score - a.score);
 
         return result;
     }
@@ -145,6 +204,20 @@ export class Utility {
             return "Error";
         } else {
             return "Not found";
+        }
+
+    }
+
+    static getScore(candidates: TVP_Candidate[], stash: string): number {
+        var candidate = candidates.find(candidate => candidate.stash == stash);
+        if (candidate) {
+            if (candidate?.score == undefined) {
+                return 0;
+            } else {
+                return candidate!.score!.aggregate;
+            }
+        } else {
+            return 0;
         }
 
     }

@@ -18,27 +18,25 @@ export class NominationMessage {
         var output: string[] = [];
         let chain_data = ChainData.getInstance();
 
-        output.push(`<p>1KV nominator (${this.nomination.nominator}) nominated the following ${this.nomination.nominees.length} validators in era <b>${this.nomination.era}</b>`);
+        output.push(`<p>1KV nominator (${this.nomination.nominator}) nominated the following ${this.nomination.nominees.length} validators in era <b>${this.nomination.era}</b><br/>`);
+        output.push(`Scores ranged from ${this.nomination.nominees[this.nomination.nominees.length-1].score.toFixed(2)} to ${this.nomination.nominees[0].score.toFixed(2)}:<br/>`);
         if (chain_data.getPrefix() == 0) {
-            output.push(`<br/><i>Note: The nomination account will leave in session 5 of era ${this.nomination.era} and the validators might be elected in era <b>${this.nomination.era + 1}</b></i>`);
+            output.push(`<i>Note: The nomination account will leave in session 5 of era ${this.nomination.era} and the validators might be elected in era <b>${this.nomination.era + 1}</b></i>`);
         }
-        output.push(':</p>');
-        await Utility.getCandidates().then(candidates => {
-            output.push("<ul>");
+        output.push('</p>');
+
+        output.push("<ul>");
 
 
-            this.nomination.nominees.forEach(nominee => {
+        this.nomination.nominees.forEach(nominee => {
 
-                var candidate_name = Utility.getName(candidates, nominee.val_address);
+            var candidate_name = Utility.getName(Utility.tvp_candidates, nominee.val_address);
 
-                output.push(`<li>${candidate_name} - ${nominee.nomination_count} era(s)</li>`);
-
-            });
-
-            output.push("</ul>");
-
+            output.push(`<li>${candidate_name} - ${nominee.nomination_count} era(s)</li>`);
 
         });
+
+        output.push("</ul>");
 
         return output.join("");
     }
@@ -47,21 +45,25 @@ export class NominationMessage {
         var output: string[] = [];
         let chain_data = ChainData.getInstance();
 
-        var percentage_change = (((difference.length * 1.0) / (this.nomination.nominees.length * 1.0)) * 100.00).toFixed(2);
+        var percentage_change:string = (((difference.length * 1.0) / (this.nomination.nominees.length * 1.0)) * 100.00).toFixed(2);
 
 
         output.push(`<p>1KV nominator (${this.nomination.nominator}) nominated the following ${this.nomination.nominees.length} validators in era <b>${this.nomination.era}</b><br/>`);
+        output.push(`Scores ranged from ${this.nomination.nominees[this.nomination.nominees.length-1].score.toFixed(2)} to ${this.nomination.nominees[0].score.toFixed(2)}:<br/>`);
         if (chain_data.getPrefix() == 0) {
             output.push(`<i>Note: The nomination account will leave in session 5 of era ${this.nomination.era} and the validators might be elected in era <b>${this.nomination.era + 1}</b></i><br/>`);
         }
         output.push(`${percentage_change}% of the nominations changed.</p>`);
 
+        if (percentage_change == "0.00") {
+            output.push(`<details><summary>Click here for details</summary>`);
+        }
 
-        await Utility.getCandidates().then(candidates => {
+        
             output.push("<ul>");
             previous_nomination.nominees.forEach(previous_nominee => {
 
-                var prev_candidate_name = Utility.getName(candidates, previous_nominee.val_address);
+                var prev_candidate_name = Utility.getName(Utility.tvp_candidates, previous_nominee.val_address);
                 //var prev_candidate_name = this.getName(candidates,previous_nominee);
 
                 if (this.nomination.nominees.find(nominee => nominee.val_address == previous_nominee.val_address) == undefined) {
@@ -70,7 +72,7 @@ export class NominationMessage {
                         var new_candidate = difference.pop();
 
                         if (new_candidate != undefined) {
-                            var new_candidate_name = Utility.getName(candidates, new_candidate.val_address);
+                            var new_candidate_name = Utility.getName(Utility.tvp_candidates, new_candidate.val_address);
 
                             output.push(`<li><del>${prev_candidate_name}</del> <b>-></b> <ins>${new_candidate_name}</ins></li>`);
                         }
@@ -90,8 +92,10 @@ export class NominationMessage {
             });
 
             output.push("</ul>");
-        });
-
+        
+        if (percentage_change == "0.00") {
+            output.push(`</details>`);
+        }
 
         return output.join("");
     }
