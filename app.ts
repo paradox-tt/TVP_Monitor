@@ -173,6 +173,8 @@ async function produceNominationSummary(nomination_map: [string, string[]][]) {
   var nominated_voters_percent = ((nominated_voters.length * 100.0) / voters.length).toFixed(2);
 
   var val_scores = validator_map.map(x => x.val).sort((a, b) => Utility.getScore(Utility.tvp_candidates, a) - Utility.getScore(Utility.tvp_candidates, b));
+  val_scores = val_scores.filter(val=>Utility.getScore(Utility.tvp_candidates,val)>0);
+
 
   output.push(`<p> In era ${current_era} there were ${nomination_map.length} nominators that nominated ${validator_map.length} unique validators. `);
   output.push(`Out of the ${voters.length} validators who participated in democracy voting, ${nominated_voters_percent}% (${nominated_voters.length}) are presently nominated.  `);
