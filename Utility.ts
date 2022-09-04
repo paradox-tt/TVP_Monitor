@@ -1,5 +1,5 @@
 import { Messaging } from "./Messaging";
-import { TVP_Candidate, ProxyAssignments, Nomination, Nominee, PreviousNominations, Nominators } from "./Types";
+import { TVP_Candidate, ProxyAssignments, Nomination, Nominee, PreviousNominations, Nominators, ValidatorList } from "./Types";
 import { MonitoredData } from "./MonitoredData";
 import { Settings } from "./Settings";
 import { ChainData } from './ChainData';
@@ -11,7 +11,7 @@ import * as rd from 'readline'
 export class Utility {
 
     static tvp_candidates: TVP_Candidate[];
-
+    static tvp_lastupdated: number;
 
     static async getCandidates(): Promise<TVP_Candidate[]> {
         let chain_data = ChainData.getInstance();
@@ -33,6 +33,7 @@ export class Utility {
         return candidates;
 
     }
+
 
     static async getNominators(): Promise<Nominators[]> {
         let chain_data = ChainData.getInstance();
@@ -74,7 +75,7 @@ export class Utility {
         return previous_nominations;
     }
 
-    static async getProxyNominees(controller: string): Promise<ProxyAssignments> {
+    static async getProxyNominees(controller: string): Promise<ProxyAssignments[]> {
         let chain_data = ChainData.getInstance();
         const network = chain_data.getChain();
 
@@ -105,7 +106,11 @@ export class Utility {
             }
         });
 
-        return result;
+        //TODO: Smoothen this out, patch in place
+        var final_result: ProxyAssignments[] = [];
+        final_result.push(result);
+
+        return final_result;
     }
 
     static async getNominatorMap(): Promise<[string, string[]][]> {
@@ -126,8 +131,10 @@ export class Utility {
             if (tvp_nominators.indexOf(nom_address!.toHuman()!.toString()) > -1) {
                 var validator_array: string[] = [];
 
-                for (var i = 0; i < validators.unwrapOrDefault().targets.length; i++) {
-                    validator_array.push(validators.unwrapOrDefault().targets[i].toHuman());
+                var val_list: ValidatorList = JSON.parse(JSON.stringify(validators.toHuman()));
+                
+                for (var i = 0; i < val_list.targets.length; i++) {
+                    validator_array.push(val_list.targets[i]);
                 }
 
                 results.push([nom_address!.toHuman()!.toString(), validator_array]);
@@ -162,9 +169,9 @@ export class Utility {
                     var val_score = 0;
 
                     if (candidate?.score == undefined) {
-                        val_score=0;
+                        val_score = 0;
                     } else {
-                        val_score= candidate!.score!.aggregate;
+                        val_score = candidate!.score!.aggregate;
                     }
 
 

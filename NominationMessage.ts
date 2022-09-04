@@ -19,7 +19,12 @@ export class NominationMessage {
         let chain_data = ChainData.getInstance();
 
         output.push(`<p>1KV nominator (${this.nomination.nominator}) nominated the following ${this.nomination.nominees.length} validators in era <b>${this.nomination.era}</b><br/>`);
-        output.push(`Scores ranged from ${this.nomination.nominees[this.nomination.nominees.length-1].score.toFixed(2)} to ${this.nomination.nominees[0].score.toFixed(2)}:<br/>`);
+        try{
+            output.push(`Scores ranged from ${this.nomination.nominees[this.nomination.nominees.length-1].score.toFixed(2)} to ${this.nomination.nominees[0].score.toFixed(2)}:<br/>`);
+        }catch(err){
+            console.log(err);
+        }
+        
         if (chain_data.getPrefix() == 0) {
             output.push(`<i>Note: The nomination account will leave in session 5 of era ${this.nomination.era} and the validators might be elected in era <b>${this.nomination.era + 1}</b></i>`);
         }
@@ -49,7 +54,12 @@ export class NominationMessage {
 
 
         output.push(`<p>1KV nominator (${this.nomination.nominator}) nominated the following ${this.nomination.nominees.length} validators in era <b>${this.nomination.era}</b><br/>`);
-        output.push(`Scores ranged from ${this.nomination.nominees[this.nomination.nominees.length-1].score.toFixed(2)} to ${this.nomination.nominees[0].score.toFixed(2)}:<br/>`);
+        try{
+            output.push(`Scores ranged from ${this.nomination.nominees[this.nomination.nominees.length-1].score.toFixed(2)} to ${this.nomination.nominees[0].score.toFixed(2)}:<br/>`);
+        }catch(err){
+            console.log(err);
+        }
+        
         if (chain_data.getPrefix() == 0) {
             output.push(`<i>Note: The nomination account will leave in session 5 of era ${this.nomination.era} and the validators might be elected in era <b>${this.nomination.era + 1}</b></i><br/>`);
         }

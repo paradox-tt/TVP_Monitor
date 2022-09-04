@@ -21,11 +21,14 @@ export class Messaging {
         this.client.start().then((x: MatrixClient) => {
             console.log("Matrix client initiated");
         })
-        
+
     }
 
-    static async sendMessage(message:string){
-        this.client.sendHtmlText(Settings.room_id, message);
+    static async sendMessage(message: string) {
+        
+        this.client.sendHtmlText(Settings.room_id, message).catch(err => {
+            this.initialize();
+        });
     }
 
 }

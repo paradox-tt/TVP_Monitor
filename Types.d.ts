@@ -8,7 +8,7 @@ export interface TVP_Account {
 export interface Nominee {
   val_address: string;
   nomination_count: number;
-  score:number;
+  score: number;
 }
 
 export interface Nomination {
@@ -35,14 +35,14 @@ export interface ProxyAssignments {
 }
 
 export interface TVP_Candidate {
-  discoveredAt: any;
-  nominatedAt: any;
+  discoveredAt: number;
+  nominatedAt: number;
   offlineSince: number;
   offlineAccumulated: number;
   rank: number;
   faults: number;
   invalidityReasons: string;
-  unclaimedEras: number[];
+  unclaimedEras: any[];
   inclusion: number;
   name: string;
   stash: string;
@@ -50,7 +50,6 @@ export interface TVP_Candidate {
   commission: number;
   identity: Identity;
   active: boolean;
-  valid: boolean;
   validity: Validity[];
   score: Score;
   total: number;
@@ -68,7 +67,7 @@ export interface Identity {
   _id: string;
 }
 
-export interface ValidityEntity {
+export interface Validity {
   valid: boolean;
   type: string;
   details: string;
@@ -78,12 +77,12 @@ export interface ValidityEntity {
 
 export interface Score {
   _id: string;
-  address: string;
   updated: number;
+  address: string;
   total: number;
   aggregate: number;
-  inclusion: number;
   spanInclusion: number;
+  inclusion: number;
   discovered: number;
   nominated: number;
   rank: number;
@@ -91,8 +90,16 @@ export interface Score {
   bonded: number;
   faults: number;
   offline: number;
+  location: number;
+  councilStake: number;
+  democracy: number;
   randomness: number;
   __v: number;
+  asn: number;
+  country: number;
+  nominatorStake: number;
+  provider: number;
+  region: number;
 }
 
 export interface PreviousNominations {
@@ -127,4 +134,12 @@ export interface Nominators {
   nominateAmount: number;
   newBondedAmount: number;
   rewardDestination: string;
+}
+
+export interface ValidatorList{
+  
+  targets:string [];
+  submittedIn: number;
+  suppressed: boolean;
+
 }

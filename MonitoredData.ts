@@ -7,15 +7,15 @@ import { Utility } from "./Utility";
 
 export class MonitoredData {
     private static instance: MonitoredData;
-    private era:number;
+    private era: number;
 
-    private proxy_info:PendingNomination[];
-    private nomination_info:Nomination[];
+    private proxy_info: PendingNomination[];
+    private nomination_info: Nomination[];
 
-    private constructor() { 
-        this.proxy_info=[];
-        this.nomination_info=[];
-        this.era=-1;
+    private constructor() {
+        this.proxy_info = [];
+        this.nomination_info = [];
+        this.era = -1;
     }
 
     public static getInstance(): MonitoredData {
@@ -26,126 +26,126 @@ export class MonitoredData {
         return MonitoredData.instance;
     }
 
-    public setEra(era:number){
-        this.era=era;
+    public setEra(era: number) {
+        this.era = era;
     }
 
-    public getEra(){
+    public getEra() {
         return this.era;
     }
 
-    public async addProxyCall(proxy_entry:PendingNomination) {
-        
-        var proxy_message:ProxyMessage = new ProxyMessage(proxy_entry);
-        var previous_entry = this.proxy_info.find(nom=>nom.nominator==proxy_entry.nominator);
+    public async addProxyCall(proxy_entry: PendingNomination) {
+
+        var proxy_message: ProxyMessage = new ProxyMessage(proxy_entry);
+        var previous_entry = this.proxy_info.find(nom => nom.nominator == proxy_entry.nominator);
 
         //console.log(proxy_entry);
 
-        if(previous_entry==undefined){
-            proxy_message.generateNewString().then(msg=>{
+        if (previous_entry == undefined) {
+            proxy_message.generateNewString().then(msg => {
                 Messaging.sendMessage(msg);
             });
-        }else{
-            proxy_message.generateDuplicateString(previous_entry.proxy_info.targets).then(msg=>{
+        } else {
+            proxy_message.generateDuplicateString(previous_entry.proxy_info.targets).then(msg => {
                 Messaging.sendMessage(msg);
             });
 
             this.removeProxyCall(previous_entry.nominator);
-        };    
+        };
 
         this.proxy_info.push(proxy_entry);
     }
 
-    public hasProxyCall(block_number:number):PendingNomination|undefined{
-        var result = this.proxy_info.find(entry=>(entry.proxy_info.number+Settings.proxy_delay_blocks+100)==block_number);       
+    public hasProxyCall(block_number: number): PendingNomination | undefined {
+        var result = this.proxy_info.find(entry => (entry.proxy_info.number + Settings.proxy_delay_blocks + 100) == block_number);
         //var result = this.proxy_info[0];
-        
+
         return result;
     }
 
-    public getNominations(controller:string):Nomination{
+    public getNominations(controller: string): Nomination {
 
-        var tvp_account = Settings.tvp_nominators.find(item=>item.controller==controller);
+        var tvp_account = Settings.tvp_nominators.find(item => item.controller == controller);
         var result = <Nomination>{};
-        
-        if(tvp_account!=undefined){
-            var find_nom = this.nomination_info.find(entry=>entry.nominator==tvp_account?.stash);
 
-            if(find_nom!=undefined){
+        if (tvp_account != undefined) {
+            var find_nom = this.nomination_info.find(entry => entry.nominator == tvp_account?.stash);
+
+            if (find_nom != undefined) {
                 return find_nom;
             }
         }
-        
+
         return result;
     }
 
-    public removeProxyCall(controller:string){
-        this.proxy_info = this.proxy_info.filter(entry=>entry.nominator!=controller);
+    public removeProxyCall(controller: string) {
+        this.proxy_info = this.proxy_info.filter(entry => entry.nominator != controller);
     }
 
-    public addNomination(nomination:Nomination){       
+    public addNomination(nomination: Nomination) {
 
-        if(this.nomination_info.length==0){
+        if (this.nomination_info.length == 0) {
             this.nomination_info.push(nomination);
 
             var nomination_message = new NominationMessage(nomination);
-            nomination_message.generateString().then(msg=>{
+            nomination_message.generateString().then(msg => {
                 Messaging.sendMessage(msg);
             });
 
-        }else{
+        } else {
 
-            var previous_nominee_index = this.nomination_info.findIndex(item=>item.nominator==nomination.nominator);
+            var previous_nominee_index = this.nomination_info.findIndex(item => item.nominator == nomination.nominator);
 
-            if(previous_nominee_index==-1){
+            if (previous_nominee_index == -1) {
                 this.nomination_info.push(nomination);
-                
+
                 var nomination_message = new NominationMessage(nomination);
-                nomination_message.generateString().then(msg=>{
+                nomination_message.generateString().then(msg => {
                     Messaging.sendMessage(msg);
                 });
-                
-            }else{
-                
-                //Validators
-                var differences:Nominee[]=[];
-                var similar:Nominee[]=[];
 
-                nomination.nominees.forEach(nominee=>{
+            } else {
+
+                //Validators
+                var differences: Nominee[] = [];
+                var similar: Nominee[] = [];
+
+                nomination.nominees.forEach(nominee => {
 
                     let found = false;
 
                     //Looks for similiarities and adds one to the count if this is the case
-                    this.nomination_info[previous_nominee_index].nominees.forEach(previous_nominee=>{
-                        if(previous_nominee.val_address==nominee.val_address){
-                            similar.push(<Nominee>{ val_address:previous_nominee.val_address, nomination_count:previous_nominee.nomination_count+1,score:Utility.getScore(Utility.tvp_candidates,previous_nominee.val_address)});
-                            found=true;
+                    this.nomination_info[previous_nominee_index].nominees.forEach(previous_nominee => {
+                        if (previous_nominee.val_address == nominee.val_address) {
+                            similar.push(<Nominee>{ val_address: previous_nominee.val_address, nomination_count: previous_nominee.nomination_count + 1, score: Utility.getScore(Utility.tvp_candidates, previous_nominee.val_address) });
+                            found = true;
                         }
                     });
 
                     //If there are no similarities
-                    if(!found){
-                        differences.push(<Nominee>{ val_address:nominee.val_address, nomination_count:1, score:Utility.getScore(Utility.tvp_candidates,nominee.val_address)});
+                    if (!found) {
+                        differences.push(<Nominee>{ val_address: nominee.val_address, nomination_count: 1, score: Utility.getScore(Utility.tvp_candidates, nominee.val_address) });
                     }
 
                 });
                 var previous_entry = this.nomination_info[previous_nominee_index];
 
-                this.nomination_info[previous_nominee_index] = <Nomination>{ 
-                                                                    era:nomination.era, 
-                                                                    nominator:nomination.nominator, 
-                                                                    nominees:differences.concat(similar)
-                                                                };
+                this.nomination_info[previous_nominee_index] = <Nomination>{
+                    era: nomination.era,
+                    nominator: nomination.nominator,
+                    nominees: differences.concat(similar)
+                };
 
                 var nomination_message = new NominationMessage(this.nomination_info[previous_nominee_index]);
 
-                
-                
-                nomination_message.generateDuplicateString(previous_entry,differences).then(msg=>{
-                
+
+
+                nomination_message.generateDuplicateString(previous_entry, differences).then(msg => {
+
                     Messaging.sendMessage(msg);
                 });
-                                    
+
             }
 
         }

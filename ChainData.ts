@@ -45,9 +45,9 @@ export class ChainData {
         if(api==undefined){
             return -1;
         }else{
-            return parseInt((await api.query.staking.activeEra())
-                                                    .unwrapOrDefault()
-                                                    .index.toString());
+            var result = (await api.query.staking.activeEra()).toString();
+                console.log(result);
+            return parseInt(JSON.parse(result).index);
         }
 
 
