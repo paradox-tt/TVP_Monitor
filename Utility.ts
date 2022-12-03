@@ -3,7 +3,8 @@ import { TVP_Candidate, ProxyAssignments, Nomination, Nominee, PreviousNominatio
 import { MonitoredData } from "./MonitoredData";
 import { Settings } from "./Settings";
 import { ChainData } from './ChainData';
-import { ApiPromise } from '@polkadot/api';
+import { ApiPromise, WsProvider } from '@polkadot/api';
+import { Codec } from '@polkadot/types-codec/types/codec';
 import fetch from "node-fetch";
 import * as fs from 'fs';
 import * as rd from 'readline'
@@ -53,7 +54,6 @@ export class Utility {
 
         return nominators;
     }
-
 
     static async getPreviousNominations(): Promise<PreviousNominations[]> {
         let chain_data = ChainData.getInstance();
@@ -132,7 +132,7 @@ export class Utility {
                 var validator_array: string[] = [];
 
                 var val_list: ValidatorList = JSON.parse(JSON.stringify(validators.toHuman()));
-                
+
                 for (var i = 0; i < val_list.targets.length; i++) {
                     validator_array.push(val_list.targets[i]);
                 }
@@ -142,6 +142,48 @@ export class Utility {
         }
 
         return results;
+    }
+
+    static async setValidatorStreak(nominees: Nominee[]): Promise<Nominee[]> {
+
+        var promise_array = [];
+
+        for (var i = 0; i < nominees.length; i++) {
+            promise_array.push(Utility.getValidationStreak(nominees[i].val_address));
+        }
+
+        await Promise.all(promise_array).then(x => {
+            for (var i = 0; i < x.length; i++) {
+                nominees[i].streak = x[i];
+            }
+        });
+
+
+        return nominees;
+    }
+    static async getValidationStreak(val_address: string): Promise<number> {
+        let chain_data = ChainData.getInstance();
+        const api = chain_data.getApi();
+
+        if (val_address == undefined)
+            return undefined;
+
+        var result = 0;
+        var current_era_codec = await api.query.staking.activeEra();
+        var current_era = Utility.CodecToObject(current_era_codec).index;
+
+        var era_stakers_clipped_codec = await api.query.staking.erasStakersClipped(current_era, val_address);
+        var era_stakers_clipped = JSON.parse(JSON.stringify(era_stakers_clipped_codec));
+
+        //console.log(era_stakers_clipped);
+        while (era_stakers_clipped.others.length > 0) {
+            result++;
+
+            var era_stakers_clipped_codec = await api.query.staking.erasStakersClipped(--current_era, val_address);
+            var era_stakers_clipped = JSON.parse(JSON.stringify(era_stakers_clipped_codec));
+        }
+
+        return result;
     }
 
     static async getValidatorNominations(tvp_nominator: string, nominator_map: [string, string[]][]): Promise<Nomination> {
@@ -189,7 +231,7 @@ export class Utility {
         return result;
     }
 
-    static getName(candidates: TVP_Candidate[], stash: string): string {
+    static getName(candidates: TVP_Candidate[], stash: string, with_ping: boolean): string {
         var candidate = candidates.find(candidate => candidate.stash == stash);
 
         if (candidate != undefined) {
@@ -205,7 +247,12 @@ export class Utility {
             }
 
             if (candidate.score != undefined) {
-                return `${candidate_name} - (${candidate.score.aggregate.toFixed(2)})`;
+                if (with_ping) {
+                    return `${candidate_name} - ( <a href=\"https://matrix.to/#/${candidate.matrix[0]}\">${candidate.matrix[0]}</a> )`;
+                } else {
+                    return `${candidate_name}`;
+                }
+
             }
 
             return "Error";
@@ -333,5 +380,48 @@ export class Utility {
 
     }
 
+    static async getPreviousNominationHash(): Promise<string> {
+        //const cd = ChainData.getInstance();
+        //const api = cd.getApi();
+        const POLKADOT_APPROX_ERA_LENGTH_IN_BLOCKS = 14400;
+        const api = await ApiPromise.create({ provider: new WsProvider(Settings.provider) });
+
+        var active_era_codec = await api.query.staking.activeEra();
+        var active_era = this.CodecToObject(active_era_codec).index;
+
+        var target_session = parseInt((await api.query.staking.erasStartSessionIndex(active_era - 1)).toString()) + 4;
+
+        var current_block = (await api.rpc.chain.getBlock()).block.header.number.toNumber();
+
+        //count backward in groups of 100 until the target session is passed
+
+        console.log(`Jumping backward`);
+        var current_session = this.CodecToObject(await api.query.session.currentIndex());
+
+        var block_hash = await api.rpc.chain.getBlockHash(current_block);
+
+        while (current_session >= target_session) {
+            current_block -= 100;
+            block_hash = await api.rpc.chain.getBlockHash(current_block);
+            var api_at = await api.at(block_hash);
+            current_session = this.CodecToObject(await api_at.query.session.currentIndex());
+        }
+        console.log(`Tiptoe-ing forward`);
+        //slowly move up by 1 block
+        while (current_session != target_session) {
+            current_block++;
+            block_hash = await api.rpc.chain.getBlockHash(current_block);
+            var api_at = await api.at(block_hash);
+            current_session = this.CodecToObject(await api_at.query.session.currentIndex());
+        }
+
+
+        return block_hash.toString();
+    }
+
+    static CodecToObject(item: Codec) {
+        const res = JSON.parse(item.toString());
+        return res;
+    }
 
 }

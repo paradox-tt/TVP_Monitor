@@ -1,6 +1,6 @@
 import { ChainData } from "./ChainData";
 import { Settings } from "./Settings";
-import { PendingNomination, TVP_Account } from "./Types";
+import { PendingNomination, TVP_Account, Nominee } from "./Types";
 import { Utility } from "./Utility";
 
 export class ProxyMessage {
@@ -32,6 +32,15 @@ export class ProxyMessage {
         var output: string[] = [];
 
         this.nominees = this.nominees.sort((a, b) => Utility.getScore(Utility.tvp_candidates, b) - Utility.getScore(Utility.tvp_candidates, a));
+        var nominees_array: Nominee[] = this.nominees.map(x => {
+            return {
+                val_address: x,
+                nomination_count: 0,
+                score: 0,
+                streak: 0
+            }
+        });
+        nominees_array = await Utility.setValidatorStreak(nominees_array);
 
         output.push(`<p>The following (${this.nominees.length}) validators should be nominated by ${this.tvp_account.stash} <br/>`);
         output.push(`Scores ranged from ${Utility.getScore(Utility.tvp_candidates, this.nominees[this.nominees.length - 1]).toFixed(2)} to ${Utility.getScore(Utility.tvp_candidates, this.nominees[0]).toFixed(2)}</p>`);
@@ -39,11 +48,13 @@ export class ProxyMessage {
 
         output.push("<ul>");
 
-        this.nominees.forEach(nominee => {
+        nominees_array.forEach(nominee => {
 
-            var candidate_name = Utility.getName(Utility.tvp_candidates, nominee);
+            var candidate_name = Utility.getName(Utility.tvp_candidates, nominee.val_address, true);
 
-            output.push(`<li>${candidate_name}</li>`);
+            output.push(`<li><b>${candidate_name}</b><br/>
+            <sup>Active for ${nominee.streak} era${(nominee.streak != 1 ? 's' : '')} | Score - ${Utility.getScore(Utility.tvp_candidates, nominee.val_address).toFixed(2)}</sup>
+            </li>`);
 
         });
 
@@ -61,7 +72,18 @@ export class ProxyMessage {
         }
 
         var output: string[] = [];
-        var difference = this.nominees.filter(item => previous_nominees.indexOf(item) < 0);
+
+        var difference:Nominee[] = this.nominees.filter(item => previous_nominees.indexOf(item) < 0).map(x => {
+            return {
+                val_address: x,
+                nomination_count: 0,
+                score: 0,
+                streak: 0
+            }
+        });
+
+
+
         var percentage_change = (((difference.length * 1.0) / (this.nominees.length * 1.0)) * 100.00).toFixed(2);
 
         let chain_data = ChainData.getInstance();
@@ -84,7 +106,7 @@ export class ProxyMessage {
         output.push("<ul>");
         previous_nominees.forEach(previous_nominee => {
 
-            var prev_candidate_name = Utility.getName(Utility.tvp_candidates, previous_nominee);
+            var prev_candidate_name = Utility.getName(Utility.tvp_candidates, previous_nominee, false);
             //var prev_candidate_name = this.getName(candidates,previous_nominee);
 
             if (this.nominees.find(nominee => nominee == previous_nominee) == undefined) {
@@ -92,10 +114,12 @@ export class ProxyMessage {
 
                     var new_candidate = difference.pop();
                     if (new_candidate != undefined) {
-                        var new_candidate_name = Utility.getName(Utility.tvp_candidates, new_candidate);
+                        var new_candidate_name = Utility.getName(Utility.tvp_candidates, new_candidate.val_address, true);
 
-                        output.push(`<li><del>${prev_candidate_name}</del> <b>-></b> <ins>${new_candidate_name}</ins></li>`);
-                        candidates_listed.push(new_candidate);
+                        output.push(`<li><del>${prev_candidate_name}</del> <b>-></b> <ins><b>${new_candidate_name}</b></ins> <br/>
+                        <sup>Active for ${new_candidate.streak} era${(new_candidate.streak != 1 ? 's' : '')} | Score - ${Utility.getScore(Utility.tvp_candidates, new_candidate.val_address).toFixed(2)}</sup>
+                        </li>`);
+                        candidates_listed.push(new_candidate.val_address);
                     }
                 }
 
@@ -111,7 +135,7 @@ export class ProxyMessage {
         if (this.nominees != undefined) {
             this.nominees.forEach(nominee => {
                 if (candidates_listed.indexOf(nominee) < 0) {
-                    var missing_candidate_name = Utility.getName(Utility.tvp_candidates, nominee);
+                    var missing_candidate_name = Utility.getName(Utility.tvp_candidates, nominee, true);
                     output.push(`<li>${missing_candidate_name}</li>`);
                 }
             });

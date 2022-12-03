@@ -33,7 +33,7 @@ async function monitorProxyAnnoucements() {
 		events.forEach((record) => {
 			// Extract the phase, event and the event types
 			const { event } = record;
-			// If the event is a proxy(annouce)
+			// If the event is a proxy(announce)
 			if (api.events.proxy.Announced.is(event)) {
 				//Get the public key from data[0] and then convert to the chain address
 				const nominator_account = encodeAddress(event.data[0].toString(), prefix);
@@ -70,8 +70,11 @@ async function executeProxyChanges(nom: string) {
 		nominators.push(nom);
 	}
 
-	Messaging.sendMessage('Loading possible proxy assignments..');
+	var for_nominator = (nom != "") ? `for ${nom} ` : '';
+
+	Messaging.sendMessage(`Loading possible proxy assignments ${for_nominator}in a few minutes...`);
 	//Preloads possible candidates
+	await new Promise(f => setTimeout(f, Settings.retry_time));
 
 	nominators.forEach(nominator => {
 		Utility.getProxyNominees(nominator).then(proxy_data => {
@@ -104,6 +107,10 @@ async function monitorEraChange() {
 	}
 
 	executeEraChange();
+	if(chain_data.getChain()=="polkadot"){
+		showActiveNominationSummary();
+	}
+		
 	//Start monitoring new session events
 
 	Messaging.sendMessage('Waiting for new session event..');
@@ -121,6 +128,11 @@ async function monitorEraChange() {
 
 				if (current_session == 1) {
 					executeEraChange();
+
+					if(chain_data.getChain()=="polkadot"){
+						showActiveNominationSummary();
+					}
+						
 				}
 
 			}
@@ -140,7 +152,7 @@ async function executeEraChange() {
 	//Preload nominations on startup
 	monitor.setEra(await chain_data.getCurrentEra());
 	//Add to the nominations which will also send a message
-	
+
 	Messaging.sendMessage(`Loading nomination data for era <b>${await chain_data.getCurrentEra()}<b>...`);
 	for (var nom_index = 0; nom_index < nominators.length; nom_index++) {
 		const nomination_data = await Utility.getValidatorNominations(nominators[nom_index].stash, nominator_map);
@@ -203,7 +215,7 @@ async function produceNominationSummary(nomination_map: [string, string[]][]) {
 		output.push(`<details>`);
 		output.push(`<summary>Click here for details</summary>`)
 		validator_map.forEach(val => {
-			output.push(`${Utility.getName(Utility.tvp_candidates, val.val)}`);
+			output.push(`${Utility.getName(Utility.tvp_candidates, val.val,false)}`);
 			output.push(`<ul>`);
 			val.nom.forEach(nom => {
 				output.push(`<li>${nom}</li>`);
@@ -215,8 +227,66 @@ async function produceNominationSummary(nomination_map: [string, string[]][]) {
 
 	//Issues a delay for the summary so that it displays last.
 	setTimeout(() => {
-		Messaging.sendMessage(output.join(""));
+		Messaging.sendMessage("");
 	}, 4000);
+
+}
+
+async function showActiveNominationSummary() {
+
+	//Issues a delay for the summary so that it displays last.
+	Messaging.sendMessage(`Preparing summary of nominations issued in the previous era...`);
+	setTimeout(() => {
+		Messaging.sendMessage("");
+	}, 120000);
+
+	const api = await ApiPromise.create({ provider: new WsProvider(Settings.provider) });
+
+	const session_five_blockhash = await Utility.getPreviousNominationHash();
+	console.log(session_five_blockhash);
+	const active_validators_codec = await api.query.session.validators();
+
+	const active_validators = JSON.parse(JSON.stringify(active_validators_codec));
+
+	const api_at = await api.at(session_five_blockhash);
+	const previous_era = Utility.CodecToObject(await api_at.query.staking.activeEra());
+
+	const x = await Utility.getNominators();
+
+	const tvp_candidates = await Utility.getCandidates();
+
+	var total_active_validators = 0;
+	var total_nominated_validators = 0;
+
+	var output = [];
+
+	for (var i = 0; i < x.length; i++) {
+
+		var nominees = Utility.CodecToObject(await api_at.query.staking.nominators(x[i].stash));
+
+		output.push(`Nominator ${x[i].stash} - nominated the following ${nominees.targets.length} validators at the beginning of session 5 of the previous era (${previous_era.index}).`);
+		output.push('<br/><br/><ul>');
+
+		total_nominated_validators += nominees.targets.length;
+		for (var y = 0; y < nominees.targets.length; y++) {
+
+			if (active_validators.indexOf(nominees.targets[y]) > -1) {
+				total_active_validators++;
+			}
+
+			var streak = await Utility.getValidationStreak(nominees.targets[y]);
+
+			output.push(`<li> ${active_validators.indexOf(nominees.targets[y]) < 0 ? `🔴` : `🟢`} - <b>${Utility.getName(tvp_candidates, nominees.targets[y],true)}</b> <br/>
+			<sup>Active for ${streak} era${(streak != 1 ? 's' : '')} | Score - ${Utility.getScore(Utility.tvp_candidates, nominees.targets[y]).toFixed(2)}</sup>
+			</li>`);
+		}
+		output.push('</ul><br/>');
+
+	}
+
+	output.push(`<p>A total of ${total_nominated_validators} validators were nominated and ${total_active_validators} (${((total_active_validators / total_nominated_validators) * 100.00).toFixed(2)}%) made it to the active set.</p>`);
+
+	Messaging.sendMessage(output.join(""));
 
 }
 
@@ -296,9 +366,9 @@ async function verifyProxyCall(proxy_nomination: PendingNomination, stash: strin
 		Messaging.sendMessage(`Proxy call for ${stash} was expected, however, ${percentage_change}% of the desired nominations were seen on-chain`);
 	}
 	console.log(`Targets`);
-	console.log(proxy_nomination.proxy_info.targets.map(val => Utility.getName(Utility.tvp_candidates, val)).sort());
+	console.log(proxy_nomination.proxy_info.targets.map(val => Utility.getName(Utility.tvp_candidates, val,false)).sort());
 	console.log(`Validators`);
-	console.log(validators.map(val => Utility.getName(Utility.tvp_candidates, val)).sort());
+	console.log(validators.map(val => Utility.getName(Utility.tvp_candidates, val,false)).sort());
 }
 
 /*
@@ -335,6 +405,9 @@ async function main() {
 	monitorProxyAnnoucements();
 	monitorEraChange();
 	monitorProxyChanges();
+
+	//const x = await Utility.getValidationStreak(`14hM4oLJCK6wtS7gNfwTDhthRjy5QJ1t3NAcoPjEepo9AH67`);
+	//console.log(x);
 
 }
 
