@@ -16,6 +16,8 @@ async function monitorProxyAnnoucements() {
 	let monitor = MonitoredData.getInstance();
 	let chain_data = ChainData.getInstance();
 
+	let last_nomination_called = new Date();
+
 	const prefix = chain_data.getPrefix();
 
 	//In the unlikely event that API is undefined then exit by return;
@@ -25,6 +27,7 @@ async function monitorProxyAnnoucements() {
 	}
 
 	await executeProxyChanges("");
+	await executeEraChange();
 
 	Messaging.sendMessage('Waiting for proxy event..');
 
@@ -40,7 +43,18 @@ async function monitorProxyAnnoucements() {
 
 				//If the nominator_account is one of the 1KV nominator accounts then
 				if (Settings.tvp_nominators.find(nominator => nominator.controller == nominator_account)) {
+					const current_datetime = new Date();				
 					executeProxyChanges(nominator_account);
+
+					//If the time between the two calls is more than a minute, 
+					//then schedule a threaded call to show nominations in 10 minutes
+					if(current_datetime.getTime() - last_nomination_called.getTime() > 60*1000){
+						last_nomination_called = new Date();
+						setTimeout(() => {
+							executeEraChange();
+						}, 10*60*1000);
+					}
+					
 				}
 			}
 
@@ -106,11 +120,11 @@ async function monitorEraChange() {
 		return;
 	}
 
-	executeEraChange();
-	if(chain_data.getChain()=="polkadot"){
+	//executeEraChange();
+	if (chain_data.getChain() == "polkadot") {
 		showActiveNominationSummary();
 	}
-		
+
 	//Start monitoring new session events
 
 	Messaging.sendMessage('Waiting for new session event..');
@@ -127,12 +141,12 @@ async function monitorEraChange() {
 				const current_session = (parseInt(event.data[0].toString()) % 6) + 1;
 
 				if (current_session == 1) {
-					executeEraChange();
+					//executeEraChange();
 
-					if(chain_data.getChain()=="polkadot"){
+					if (chain_data.getChain() == "polkadot") {
 						showActiveNominationSummary();
 					}
-						
+
 				}
 
 			}
@@ -215,7 +229,7 @@ async function produceNominationSummary(nomination_map: [string, string[]][]) {
 		output.push(`<details>`);
 		output.push(`<summary>Click here for details</summary>`)
 		validator_map.forEach(val => {
-			output.push(`${Utility.getName(Utility.tvp_candidates, val.val,false)}`);
+			output.push(`${Utility.getName(Utility.tvp_candidates, val.val, false)}`);
 			output.push(`<ul>`);
 			val.nom.forEach(nom => {
 				output.push(`<li>${nom}</li>`);
@@ -276,7 +290,7 @@ async function showActiveNominationSummary() {
 
 			var streak = await Utility.getValidationStreak(nominees.targets[y]);
 
-			output.push(`<li> ${active_validators.indexOf(nominees.targets[y]) < 0 ? `🔴` : `🟢`} - <b>${Utility.getName(tvp_candidates, nominees.targets[y],true)}</b> <br/>
+			output.push(`<li> ${active_validators.indexOf(nominees.targets[y]) < 0 ? `🔴` : `🟢`} - <b>${Utility.getName(tvp_candidates, nominees.targets[y], true)}</b> <br/>
 			<sup>Active for ${streak} era${(streak != 1 ? 's' : '')} | Score - ${Utility.getScore(Utility.tvp_candidates, nominees.targets[y]).toFixed(2)}</sup>
 			</li>`);
 		}
@@ -366,9 +380,9 @@ async function verifyProxyCall(proxy_nomination: PendingNomination, stash: strin
 		Messaging.sendMessage(`Proxy call for ${stash} was expected, however, ${percentage_change}% of the desired nominations were seen on-chain`);
 	}
 	console.log(`Targets`);
-	console.log(proxy_nomination.proxy_info.targets.map(val => Utility.getName(Utility.tvp_candidates, val,false)).sort());
+	console.log(proxy_nomination.proxy_info.targets.map(val => Utility.getName(Utility.tvp_candidates, val, false)).sort());
 	console.log(`Validators`);
-	console.log(validators.map(val => Utility.getName(Utility.tvp_candidates, val,false)).sort());
+	console.log(validators.map(val => Utility.getName(Utility.tvp_candidates, val, false)).sort());
 }
 
 /*
