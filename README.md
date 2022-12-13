@@ -56,13 +56,13 @@ This system allows users to examine the nomination history of the TVP nomination
 <b>Images</b>
 <br/> 
 <figure> 
-<img src='https://github.com/paradox-tt/TVP_Monitor/blob/main/images/ProxyNominationChange.jpg'>
+<img src='https://github.com/paradox-tt/TVP_Monitor/blob/master/images/ProxyNominationChange.jpg'>
 <figcaption align="center">Img 1: Shows a change in nomination at the proxy level, this SHOULD be applied in the future and gives the validator some forewarning. Also note that two valdiators were re-nominated by the proxy account, these were not striked-out.</figcaption>
  </figure>
  
 <br/> <br/> 
 <figure> 
-<img src='https://github.com/paradox-tt/TVP_Monitor/blob/main/images/ChangeInNominations.jpg'>
+<img src='https://github.com/paradox-tt/TVP_Monitor/blob/master/images/ChangeInNominations.jpg'>
 <figcaption align="center">Img 2: Shows a change in actual nomination, this confirms that the proxy call was actually made</figcaption>
  </figure>
 <hr/>
