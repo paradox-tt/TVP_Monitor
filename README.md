@@ -43,7 +43,7 @@ This system allows users to examine the nomination history of the TVP nomination
   <li> At each era change, the bot monitors for any changes in nominations.  If there are differences this is represented with strikethroughs, any validator to retain nominations for a subsequent era would have their era count incremented.</li>
 </ol>
  <hr/>
- <b>Phase 2</b>
+ <b>Phase 2 ✔️ - Completed</b>
  <br/>
 <p>With the launch of the application in private quarters some suggestions for improvments have been noted.  These items will be actioned as a phase 2 after a public launch of the initial build.
 <ul>
