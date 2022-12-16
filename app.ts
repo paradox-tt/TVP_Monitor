@@ -16,8 +16,6 @@ async function monitorProxyAnnoucements() {
 	let monitor = MonitoredData.getInstance();
 	let chain_data = ChainData.getInstance();
 
-	let last_nomination_called = new Date();
-
 	const prefix = chain_data.getPrefix();
 
 	//In the unlikely event that API is undefined then exit by return;
@@ -43,17 +41,8 @@ async function monitorProxyAnnoucements() {
 
 				//If the nominator_account is one of the 1KV nominator accounts then
 				if (Settings.tvp_nominators.find(nominator => nominator.controller == nominator_account)) {
-					const current_datetime = new Date();				
+									
 					executeProxyChanges(nominator_account);
-
-					//If the time between the two calls is more than a minute, 
-					//then schedule a threaded call to show nominations in 10 minutes
-					if(current_datetime.getTime() - last_nomination_called.getTime() > 60*1000){
-						last_nomination_called = new Date();
-						setTimeout(() => {
-							executeEraChange();
-						}, 10*60*1000);
-					}
 					
 				}
 			}
@@ -333,6 +322,8 @@ async function monitorProxyChanges() {
 	let monitor = MonitoredData.getInstance();
 	let chain_data = ChainData.getInstance();
 
+	let last_nomination_called = new Date();
+	
 	const api = chain_data.getApi();
 	if (api == undefined) {
 		return;
@@ -347,10 +338,18 @@ async function monitorProxyChanges() {
 			Messaging.initialize();
 			var tvp_nominator = Settings.tvp_nominators.find(nominator => nominator.controller == proxy_data!.nominator);
 			var stash = tvp_nominator != undefined ? tvp_nominator.stash : "unknown";
+			const current_datetime = new Date();
 
 			verifyProxyCall(proxy_data, stash);
 
-
+					//If the time between the two calls is more than a minute, 
+					//then schedule a threaded call to show nominations in 10 minutes
+					if(current_datetime.getTime() - last_nomination_called.getTime() > 60*1000){
+						last_nomination_called = new Date();
+						setTimeout(() => {
+							executeEraChange();
+						}, 10*60*1000);
+					}
 
 		}
 	});
