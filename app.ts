@@ -344,7 +344,7 @@ async function monitorProxyChanges() {
 
 					//If the time between the two calls is more than a minute, 
 					//then schedule a threaded call to show nominations in 10 minutes
-					if(current_datetime.getTime() - last_nomination_called.getTime() > 60*1000){
+					if(current_datetime.getTime() - last_nomination_called.getTime() > 5*60*1000){
 						last_nomination_called = new Date();
 						setTimeout(() => {
 							executeEraChange();
