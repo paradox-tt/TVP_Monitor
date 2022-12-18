@@ -267,7 +267,7 @@ async function showActiveNominationSummary() {
 
 		var nominees = Utility.CodecToObject(await api_at.query.staking.nominators(x[i].stash));
 
-		output.push(`Nominator ${x[i].stash} - nominated the following ${nominees.targets.length} validators at the beginning of session 5 of the previous era (${previous_era.index}).`);
+		output.push(`${x[i].stash} nominated the following ${nominees.targets.length} validators at the beginning of session 5 of the previous era (${previous_era.index}).`);
 		output.push('<br/><br/><ul>');
 
 		total_nominated_validators += nominees.targets.length;
