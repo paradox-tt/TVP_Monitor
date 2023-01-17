@@ -41,9 +41,9 @@ async function monitorProxyAnnoucements() {
 
 				//If the nominator_account is one of the 1KV nominator accounts then
 				if (Settings.tvp_nominators.find(nominator => nominator.controller == nominator_account)) {
-									
+
 					executeProxyChanges(nominator_account);
-					
+
 				}
 			}
 
@@ -265,26 +265,30 @@ async function showActiveNominationSummary() {
 
 	for (var i = 0; i < x.length; i++) {
 
-		var nominees = Utility.CodecToObject(await api_at.query.staking.nominators(x[i].stash));
+		var nominees_codec = await api_at.query.staking.nominators(x[i].stash).catch(err => console.log(err));
 
-		output.push(`${x[i].stash} nominated the following ${nominees.targets.length} validators at the beginning of session 5 of the previous era (${previous_era.index}).`);
-		output.push('<br/><br/><ul>');
+		if (nominees_codec) {
 
-		total_nominated_validators += nominees.targets.length;
-		for (var y = 0; y < nominees.targets.length; y++) {
+			var nominees = Utility.CodecToObject(nominees_codec);
 
-			if (active_validators.indexOf(nominees.targets[y]) > -1) {
-				total_active_validators++;
-			}
+			output.push(`${x[i].stash} nominated the following ${nominees.targets.length} validators at the beginning of session 5 of the previous era (${previous_era.index}).`);
+			output.push('<br/><br/><ul>');
 
-			var streak = await Utility.getValidationStreak(nominees.targets[y]);
+			total_nominated_validators += nominees.targets.length;
+			for (var y = 0; y < nominees.targets.length; y++) {
 
-			output.push(`<li> ${active_validators.indexOf(nominees.targets[y]) < 0 ? `🔴` : `🟢`} - <b>${Utility.getName(tvp_candidates, nominees.targets[y], true)}</b> <br/>
+				if (active_validators.indexOf(nominees.targets[y]) > -1) {
+					total_active_validators++;
+				}
+
+				var streak = await Utility.getValidationStreak(nominees.targets[y]);
+
+				output.push(`<li> ${active_validators.indexOf(nominees.targets[y]) < 0 ? `🔴` : `🟢`} - <b>${Utility.getName(tvp_candidates, nominees.targets[y], true)}</b> <br/>
 			<sup>Active for ${streak} era${(streak != 1 ? 's' : '')} | Score - ${Utility.getScore(Utility.tvp_candidates, nominees.targets[y]).toFixed(2)}</sup>
 			</li>`);
+			}
+			output.push('</ul><br/>');
 		}
-		output.push('</ul><br/>');
-
 	}
 
 	output.push(`<p>A total of ${total_nominated_validators} validators were nominated and ${total_active_validators} (${((total_active_validators / total_nominated_validators) * 100.00).toFixed(2)}%) made it to the active set.</p>`);
@@ -323,7 +327,7 @@ async function monitorProxyChanges() {
 	let chain_data = ChainData.getInstance();
 
 	let last_nomination_called = new Date();
-	
+
 	const api = chain_data.getApi();
 	if (api == undefined) {
 		return;
@@ -342,14 +346,14 @@ async function monitorProxyChanges() {
 
 			verifyProxyCall(proxy_data, stash);
 
-					//If the time between the two calls is more than a minute, 
-					//then schedule a threaded call to show nominations in 10 minutes
-					if(current_datetime.getTime() - last_nomination_called.getTime() > 5*60*1000){
-						last_nomination_called = new Date();
-						setTimeout(() => {
-							executeEraChange();
-						}, 10*60*1000);
-					}
+			//If the time between the two calls is more than a minute, 
+			//then schedule a threaded call to show nominations in 10 minutes
+			if (current_datetime.getTime() - last_nomination_called.getTime() > 5 * 60 * 1000) {
+				last_nomination_called = new Date();
+				setTimeout(() => {
+					executeEraChange();
+				}, 10 * 60 * 1000);
+			}
 
 		}
 	});
