@@ -8,6 +8,7 @@ import { Codec } from '@polkadot/types-codec/types/codec';
 import fetch from "node-fetch";
 import * as fs from 'fs';
 import * as rd from 'readline'
+import "@polkadot/api-augment";
 
 export class Utility {
 
@@ -179,7 +180,7 @@ export class Utility {
         while (era_stakers_clipped.others.length > 0) {
             result++;
 
-            var era_stakers_clipped_codec = await api.query.staking.erasStakersClipped(--current_era, val_address);
+            var era_stakers_clipped_codec:Codec = await api.query.staking.erasStakersClipped(--current_era, val_address);
             var era_stakers_clipped = JSON.parse(JSON.stringify(era_stakers_clipped_codec));
         }
 
@@ -420,8 +421,14 @@ export class Utility {
     }
 
     static CodecToObject(item: Codec) {
-        const res = JSON.parse(item.toString());
-        return res;
+        try{
+            const res = JSON.parse(item.toString());
+            return res;
+        }catch(e){
+            console.log(`Error is ${item.toString()}`);
+        }
+
+        return {};
     }
 
 }

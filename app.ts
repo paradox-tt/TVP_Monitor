@@ -5,8 +5,8 @@ import { MonitoredData } from './MonitoredData';
 import { encodeAddress } from '@polkadot/util-crypto';
 import { Utility } from "./Utility";
 import { ChainData } from './ChainData';
-import { Nomination, PendingNomination } from './Types';
-
+import { Nomination, PendingNomination} from './Types';
+import "@polkadot/api-augment";
 
 /*
   Monitors for a proxy(announce) event, if it occurs then display a message
@@ -264,13 +264,17 @@ async function showActiveNominationSummary() {
 	var output = [];
 
 	for (var i = 0; i < x.length; i++) {
+		console.log(`Examining stash ${x[i].stash}`);
 
-		var nominees_codec = await api_at.query.staking.nominators(x[i].stash).catch(err => console.log(err));
+		var nominees_codec = await (await api_at.query.staking.nominators(x[i].stash)).unwrapOrDefault();
+		
+		console.log(`Nominees codec = ${nominees_codec}`);
+		
 
-		if (nominees_codec) {
+		if (!nominees_codec.isEmpty) {
 
 			var nominees = Utility.CodecToObject(nominees_codec);
-
+			
 			output.push(`${x[i].stash} nominated the following ${nominees.targets.length} validators at the beginning of session 5 of the previous era (${previous_era.index}).`);
 			output.push('<br/><br/><ul>');
 
