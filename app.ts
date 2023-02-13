@@ -264,11 +264,11 @@ async function showActiveNominationSummary() {
 	var output = [];
 
 	for (var i = 0; i < x.length; i++) {
-		console.log(`Examining stash ${x[i].stash}`);
+		//console.log(`Examining stash ${x[i].stash}`);
 
 		var nominees_codec = await (await api_at.query.staking.nominators(x[i].stash)).unwrapOrDefault();
 		
-		console.log(`Nominees codec = ${nominees_codec}`);
+		//console.log(`Nominees codec = ${nominees_codec}`);
 		
 
 		if (!nominees_codec.isEmpty) {
